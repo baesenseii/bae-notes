@@ -12,4 +12,5 @@ red@ops:~/$ whoami
 
 - This is quite frankly my first time blogging and recording my research content (after procrastinating for so long)
 - Mainly focusing on CTF challenges, and also other stuffs/thoughts on other matters (maybe cybersecurity specific, could be pedagogy specific too, so... :))
-- to navigate, feel free to look on the left hand sidebar (under 'Explorer') for more information.
+- To navigate, feel free to look on the left hand sidebar (under 'Explorer') for more information.
+	- If you can't see the sidebar, zoom out of your web browser (80% worked for me).
