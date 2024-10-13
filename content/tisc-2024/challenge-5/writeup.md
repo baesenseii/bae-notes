@@ -1,12 +1,9 @@
-```
 ---
 title: "How to publish Obsidian notes with Quartz on GitHub Pages"
 draft: true
 tags:
   - 
 ---
-```
-
 ![[Pasted image 20240930055143.png]]
 
 HUGE CREDIT TO MAH BUDDY THAT I MANAGED TO PULL INTO THIS HELLHOLE cExplr for this TISC challenge (I seriously wouldn't have be able to do this without him man, and I learnt the MOST out of it). Solving the challenge involves 3 parts:

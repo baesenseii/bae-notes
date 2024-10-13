@@ -1,4 +1,3 @@
-```
 ---
 title: "Challenge 1 - Navigating the Digital Labyrinth"
 draft: false
@@ -7,8 +6,6 @@ tags:
   - tisc24-challenge1
   - navigating_the_digital_labyrinth
 ---
-```
-
 Finally having the time to do a write-up for the TISC 2024 challenges, starting with the first challenge called "Navigating the Digital Labyrinth":
 
 ![[challenge-1-1.png]]

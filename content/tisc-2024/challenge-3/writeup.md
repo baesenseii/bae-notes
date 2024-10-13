@@ -1,12 +1,9 @@
-```
 ---
 title: "Challenge 3 - Digging Up History"
 draft: true
 tags:
   - 
 ---
-```
-
 ![[Pasted image 20240930053657.png]]
 
 ![[Pasted image 20240930053707.png]]

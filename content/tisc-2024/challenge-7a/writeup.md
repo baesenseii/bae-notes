@@ -1,12 +1,9 @@
-```
 ---
 title: "How to publish Obsidian notes with Quartz on GitHub Pages"
 draft: true
 tags:
   - 
 ---
-```
-
 ![[Pasted image 20240930055818.png]]
 
 ![[Pasted image 20240930055257.png]]

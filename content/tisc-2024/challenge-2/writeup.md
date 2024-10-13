@@ -1,12 +1,9 @@
-```
 ---
 title: "Challenge 2 - Language, Labyrinth and (Graphics)Magick"
 draft: true
 tags:
   - helloworld
 ---
-```
-
 ![[Pasted image 20240930055839.png]]
 
 Steps to solve the challenge:
