@@ -1,8 +1,10 @@
 ---
-title: "Challenge 2 - Language, Labyrinth and (Graphics)Magick"
+title: Challenge 2 - Language, Labyrinth and (Graphics)Magick
 draft: true
 tags:
-  - helloworld
+  - tisc24
+  - tisc24-challenge2
+  - language_labyrinth_and_graphicsmagick
 ---
 ![[Pasted image 20240930055839.png]]
 
