@@ -6,6 +6,8 @@ tags:
   - tisc24-challenge1
   - navigating_the_digital_labyrinth
 ---
+# Writeup
+
 Finally having the time to do a write-up for the TISC 2024 challenges, starting with the first challenge called "Navigating the Digital Labyrinth":
 
 ![[challenge-1-1.png]]
@@ -89,3 +91,7 @@ After multiple tries, it turns out that the answer to send to the Telegram bot w
 ![[Pasted image 20240930050950.png]]
 
 And VOILA! The flag presents itself: TISC{OS1N7_Cyb3r_InV35t1g4t0r_uAhf3n}
+
+# Thoughts
+
+Quite frankly I am not really a big fan of OSINT CTF challenges, but i guess given that this is the first challenge and more of a warmup round, I guess you could say that I find some form of joy doing this challenge.

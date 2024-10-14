@@ -1,9 +1,13 @@
 ---
-title: "Challenge 3 - Digging Up History"
+title: Challenge 3 - Digging Up History
 draft: true
 tags:
-  - 
+  - tisc24
+  - tisc24-challenge3
+  - digging_up_history
 ---
+# Writeup
+
 ![[Pasted image 20240930053657.png]]
 
 ![[Pasted image 20240930053707.png]]
