@@ -1,27 +1,121 @@
 ---
-title: "How to publish Obsidian notes with Quartz on GitHub Pages"
-draft: true
+title: Challenge 4 - AlligatorPay
+draft: false
 tags:
-  - 
+  - tisc24
+  - tisc24-challenge4
+  - alligatorpay
 ---
+# Writeup
+
 ![[Pasted image 20240930055121.png]]
+I guess the one thing that i will remember from this challenge is this:
+
+"
+Alligator Pay, Alligator Pay
+Swipe me up, you're on your way.
+Safe and fast, every day,
+Alligator leads the way!
+"
+HAHAHAHAHA! Anyway back to the writeup.
+
+So we are presented with a web application that takes in a specific Alligator Pay Card and present the current balance of the card. The sample testcard.agpay file is as follows:
+
+![[Pasted image 20240930054003.png]]
+
+As there were no HTTP requests being sent upon uploading the testcard.agpay file into the web application, it is highly possible that the whole web application's logic was mainly client-side. And as it turns out...
+
+```
+const arrayBuffer = await file.arrayBuffer();
+        const dataView = new DataView(arrayBuffer);
+
+        const signature = getString(dataView, 0, 5);
+        if (signature !== "AGPAY") {
+          alert("Invalid Card");
+          return;
+        }
+        const version = getString(dataView, 5, 2);
+        const encryptionKey = new Uint8Array(arrayBuffer.slice(7, 39));
+        const reserved = new Uint8Array(arrayBuffer.slice(39, 49));
+
+        const footerSignature = getString(
+          dataView,
+          arrayBuffer.byteLength - 22,
+          6
+        );
+        if (footerSignature !== "ENDAGP") {
+          alert("Invalid Card");
+          return;
+        }
+        const checksum = new Uint8Array(
+          arrayBuffer.slice(arrayBuffer.byteLength - 16, arrayBuffer.byteLength)
+        );
+
+        const iv = new Uint8Array(arrayBuffer.slice(49, 65));
+        const encryptedData = new Uint8Array(
+          arrayBuffer.slice(65, arrayBuffer.byteLength - 22)
+        );
+
+        const calculatedChecksum = hexToBytes(
+          SparkMD5.ArrayBuffer.hash(new Uint8Array([...iv, ...encryptedData]))
+        );
+
+        if (!arrayEquals(calculatedChecksum, checksum)) {
+          alert("Invalid Card");
+          return;
+        }
+
+        const decryptedData = await decryptData(
+          encryptedData,
+          encryptionKey,
+          iv
+        );
+
+        const cardNumber = getString(decryptedData, 0, 16);
+        const cardExpiryDate = decryptedData.getUint32(20, false);
+        const balance = decryptedData.getBigUint64(24, false);
+[21:42]
+ocument.getElementById("cardNumber").textContent =
+          formatCardNumber(cardNumber);
+        document.getElementById("cardExpiryDate").textContent =
+          "VALID THRU " + formatDate(new Date(cardExpiryDate * 1000));
+        document.getElementById("balance").textContent =
+          "$" + balance.toString();
+        console.log(balance);
+        if (balance == 313371337) {
+          function arrayBufferToBase64(buffer) {
+            let binary = "";
+            const bytes = new Uint8Array(buffer);
+            const len = bytes.byteLength;
+            for (let i = 0; i < len; i++) {
+              binary += String.fromCharCode(bytes[i]);
+            }
+            return window.btoa(binary);
+          }
+```
+
+After carefully studying this god-foresaken piece of JavaScript code, it seems that to get the flag, we need to get the balance of the card to be 313371337. Setting the balance of the AlligatorPay card isn't that straightforward because of the various integrity-level checks + encryption that is being done during the construction of the card. 
+
+As such, a detailed breakdown of the card's structure has been documented by yours truly:
 
 ***Card structure (based on 135 bytes)***
-byte 0 to byte 4 => signature "AGPAY"
-byte 5 to byte 6 => version
-byte 7 to byte 38 => encryption key
-byte 39 to byte 48 => reserved
-byte 49 to byte 64 => iv
-byte 65 to byte 112 => encrypted data
-byte 113 to byte 117 => footer signature "ENDAGP"
-byte 118 to 134 => checksum (iv + encrypted data => md5hash) (edited)
+- byte 0 to byte 4 => signature "AGPAY"
+- byte 5 to byte 6 => version
+- byte 7 to byte 38 => encryption key
+- byte 39 to byte 48 => reserved
+- byte 49 to byte 64 => iv
+- byte 65 to byte 112 => encrypted data
+- byte 113 to byte 117 => footer signature "ENDAGP"
+- byte 118 to 134 => checksum (iv + encrypted data => md5hash) (edited)
 
-ベイ先生 — 15/09/2024 21:32
-encrypted data (sample size is 48 bytes) contains cleartext data which make up the following:
-byte 0 to byte 15 => cardNumber
-byte 16 to byte 19 => some standard byte data (no idea what it is)
-byte 20 to byte 23 => card expiry date (unsigned 32-bit int)
-byte 24 to byte 31 => balance of card (unsigned 32-bit int, big indian notation)
+The decrypted data (48 bytes in its encrypted state) contains the following data structure:
+- byte 0 to byte 15 => cardNumber
+- byte 16 to byte 19 => some standard byte data (no idea what it is)
+- byte 20 to byte 23 => card expiry date (unsigned 32-bit int)
+- byte 24 to byte 31 => balance of card (unsigned 32-bit int, big indian notation)
+- byte 32 to byte 48 => i don't really care.
+
+Based on this understanding, and my scripting brain, the following Python script was used to reconstruct a new AlligatorPay card with the intended balance of 313371337 (this requires the testcard.agpay as a reference card template):
 
 ```
 #!/usr/bin/python3
@@ -129,9 +223,16 @@ sample.close()
 
 ```
 
-![[Pasted image 20240930054003.png]]
+The new card was then uploaded into the web application, and there you go, le flag:
+
 ![[Pasted image 20240930054042.png]]
-## Steps taken:
-- downloaded the sample agpay card file.
-- created a python script that replicates the extraction of bytes for the credit card fields, and then regenerates a new one based on the new balance value.
-- upload the new credit card file into the app, voila, flag shown.
+
+Flag: TISC{533_Y4_L4T3R_4LL1G4T0R_a8515a1f7004dbf7d5f704b7305cdc5d}
+
+# Thoughts
+
+I would say this is a really good brain teaser to work on one of the most fundamental skills of reverse engineering, which is to build your ACTUAL understanding of the application on how it works (from the submission of the AG card to the displaying of balance on the site).
+
+I also took this opportunity to practise my scripting skills (yes yes, i know people keep talking about using GenAI to create the script, but i believe that by doing so, you shortchange the ability to think logically in terms of the flow of data when building your script). I know that many people would rather just edit the provided AG card using hex editors and such, but the idea of scripting out the construct of the new AG card personally helps you as a security researcher to logically provide a solution to anyone without effort required.
+
+I mean, even taking the effort to do a writeup something like this takes a considerable amount of effort for me because it requires me to think about the flow / thought process when approaching the challenge and how do i convey it right so that people can comprehend the writeup after reading it.
