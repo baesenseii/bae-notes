@@ -1,61 +1,90 @@
 ---
-title: "How to publish Obsidian notes with Quartz on GitHub Pages"
-draft: true
+title: Challenge 5 - Hardware isn't that Hard!
+draft: false
 tags:
-  - 
+  - tisc24
+  - tisc24-challenge5
+  - hardware_isnt_that_hard
 ---
+# Writeup
+
 ![[Pasted image 20240930055143.png]]
 
+To be frank, for this challenge, i had like A LOT OF ADVICE from many of my buddies in terms of how to approach this challenge as this 
 HUGE CREDIT TO MAH BUDDY THAT I MANAGED TO PULL INTO THIS HELLHOLE cExplr for this TISC challenge (I seriously wouldn't have be able to do this without him man, and I learnt the MOST out of it). Solving the challenge involves 3 parts:
 
-- reverse engineering the flash dump
-- reverse engineering i2c communication with the implant
+- Reverse Engineering of the flash dump
+- Reverse Engineering of I2C communication with the implant
+- Putting the puzzle together and getting the goddamn flag
+## RE of Flash Dump
 
-**_rev dump_**
+Challenge starts off by providing a dump file of the i2c implant (command syntax used for dumping the image was via esptool, which meant that the dump we're dealing with had something to do with ESP32). I tried out many ESP32 tools on GitHub, but the one that had the most success of carving out the various partitions is this tool:
 
-- challenge starts off by providing a dump file of the i2c implant (command syntax used for dumping the image was via esptool, which meant that the dump we're dealing with had something to do with ESP32)
-- tried and tested out a number of tools, and the one that had the most success of carving out the various partitions is this tool: [https://github.com/BlackVS/esp32knife](https://github.com/BlackVS/esp32knife "https://github.com/BlackVS/esp32knife")
+[https://github.com/BlackVS/esp32knife](https://github.com/BlackVS/esp32knife "https://github.com/BlackVS/esp32knife")
 
-An interesting output was an ELF file, which was loaded onto mah fav disassembler Ghidra, and that's when I knew, idk wtf I was doing.
+An interesting output was an ELF file, which was loaded onto mah fav disassembler Ghidra, and that's when I knew, idk wtf I was doing. It took me a while to find out what I was reading using the various strings from the dram0.data segment (there was a fake flag and some other strings):
 
-- But took me a while to find out what I was reading using the various strings from the .romdata segment (there was a fake flag and some other strings)
-- but yeah advised further that there's no point analyzing more if we can't figure out how to communicate with the implant first.
+![[Pasted image 20241017232832.png]]
+But apart from that, meh, kinda hit a rock wall via this approach. Let's try interacting with the network service I2C comms.
+## RE of I2C Communications
 
-**Rev i2c comms**
-
-- connected to chals.tisc24.ctf.sg via 61622 and saw a very nice ASCII diagram that indicates I2C.
+An attempt was made to connect to chals.tisc24.ctf.sg via 61622 and saw a very nice ASCII diagram that indicates I2C.
 - there are 3 commands: SEND, RECV, EXIT.
 - after painstakingly reading so about i2c comms, there are two things that we need to find out: what addressing scheme is it using, and what is the slave address of the i2c implant.
 - thanks to the example written for the SEND command, we can establish that it is using a 7-bit addressing scheme (MSB contains 7-bit address value + 1-bit to determine write (0) or read (1) operation)
-- at first I simply tried to just send bogus data and received it immediately, and again hit with a damn rock wall.
-- till yesterday cExplr told me he had an amazing breakthrough whereby 3 commands were sent (after numerous automated trial and errors):
+
+![[Pasted image 20241017233808.png]]
+After numerous automated trial and errors on the data, an amazing breakthrough appeared when the following sequence of data was sent:
+
 ```
 SEND D2 46 
 SEND D3 
 RECV 20
 ```
 
-- returned bytes that are NOT ZERO. And it did make sense on the order of the commands given. Just a breakdown of what was sent:
+Surprisingly, the returned bytes were NOT ZEROES. And it did make sense on the order of the commands given. Here's a quick breakdown of what happened:
+- For the first command, payload 46 was written to address 0x69 (SEND D2 46) on the I2C bus 
+- A read condition was also sent to the I2C bus so that we can read off the bytes from the same I2C bus via our buffer 
+- The RECV command reads the bytes off the buffer (which in this case prints out some weird bytes that are finally NOT ZERO)
 
--- payload 46 was written to address 0x69 (SEND D2 46) on the I2C bus -- a read condition was also sent to the I2C bus so that we can read off the bytes from the same I2C bus via our buffer -- the RECV command reads the bytes off the buffer (which in this case prints out some weird bytes that are finally NOT ZERO)
-
-- and it turns out that we've accidentally found the slave address too, hurray for that! Now we gotta try to make sense of what we have between the disassembled code and the behavior we observed.
-
-
-**back to the app**
+And it turns out that we've accidentally found the slave address too, hurray for that! Now we gotta try to make sense of what we have between the disassembled code and the behavior we observed.
+## **Back to the app**
 
 - Now that we know how to talk to the app, it's time to figure out what caused the output.
 - After going through the disassembled ESP32 code, a particular function of interest was discovered @ FUN_400d1614 that was spitting output.
 - realised that using the 3 commands above, sending the payload 4D results in the CrapTPM banner to be displayed, whereas payload 46 results in an "encrypted" form of the flag.
-- the encryption involves a byte-level XOR encryption as seen in the disassembled code, or what cExplr has deduced it to be a rolling XOR encryption (as seen in the function).
-- what makes it even more interesting is that the generation of each key uses a random seed that is an unsigned short variable (16-bit), but when the XOR encryption took place, the resulting value was a byte worth (8-bit) ==> NOT the entire KEY was used for the XOR operation, only 1 byte worth.
-- As we know that the first 5 characters of the flag start with 'TISC{', we could do a XOR operation with the encrypted value for each character, however due to the bit shifts on an unsigned short variable during the key generation, reversing it back will not be possible due to possible data loss.
-- so the approach here is this (not sure how to explain this):
+- the encryption involves a byte-level XOR encryption as seen in the disassembled code, or what seems to be some form of a custom rolling XOR encryption (as seen in the function):
 
---> the first byte of the XORed result between the encrypted value and the word "T", do a brute force attack of the 2nd byte (most significant byte) till the key results to the next byte of the XORed result between the encrypted value and the letter "I". --> once a key is discovered for the above, function gets looped again with the new key to see if the next result would be the XORed result between the 2nd encrypted byte value and the word "I". --> we have samples up to the first 5 characters, so if we find the correct key, it should work.
+![[Pasted image 20241021214409.png]]
 
-- once the full key is found (for each byte), do a XOR encryption between the discovered full key and the encrypted value from the TPM = BAM ZE FLAG
+![[Pasted image 20241017234015.png]]
+
+The "custom_rolling_xor" function utilises a global 'key' variable that aids in the XOR encryption process.
+What makes it even more interesting is that even though the key is an unsigned short variable (16-bit, 2 bytes), only the lower 8 bits of the key was used as the resulting value was a byte worth (8-bit).
+
+As it is common knowledge for this CTF that the first 5 characters of the flag start with 'TISC{', we could do a sample XOR operation with the encrypted value for each character, however due to the bit shifts on an unsigned short variable during the key generation, reversing it back will not be possible due to possible data loss.
+
+So this was the approach taken to obtain the flag:
+
+1) The first XOR operation was performed between the 1st byte of the encrypted value (from the I2C bus) and the letter "T". This is to obtain the first half (first 8-bits) of the global xor key (which is originally 16-bits).
+   
+   In context, the design of the global XOR key is as follows:
+
+|-first_half-|-second_half-|
+   
+2) A brute force attack is performed to guess the second half (second 8-bits) of the global xor key. To verify if the value is correct, we have do another XOR operation with letter "I" and the 2nd byte of the encrypted value (from the I2C bus)
+3) Once the second half is guessed, the second half gets moved to the first half of the global XOR key, leaving the second half again for guessing.
+4) Steps 2 and 3 are then repeated again with the following pairs:
+   - "S" and 3rd byte of ciphertext
+   - "C" and 4th byte of ciphertext
+   - "{" and 5th byte of ciphertext.
+
+For subsequent bytes (after the "{"), we noticed that bruteforce attacks of the second half of the global XOR key is based on the **FIRST** instance of the bruteforce result to generate the subsequent ciphertext values.
+
+So with this pattern guessing method in mind, the key was then discovered for each byte. From there, just simply decrypt the ciphertext from the I2C bus with the actual key and you get the flag:
 ![[Pasted image 20240930054335.png]]
+
+Script used is as follows below (note that this script uses recursive functions to obtain the key):
 
 ```
 # key is global and will be reused
@@ -156,3 +185,7 @@ for i in range(len(possible_key)):
 print(flag)
 
 ```
+
+Flag: TISC{hwfuninnit}
+## Thoughts
+Not going to lie but i was initially lost in this, but it took me a considerable amount of time to understand not only the Ghidra output but also the bit shifts (both left and right) that really threw me off many times. But thankfully with some guidance, i was able to do it, and i totally learnt alot from this!

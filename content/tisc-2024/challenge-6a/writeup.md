@@ -1,12 +1,51 @@
 ---
-title: "How to publish Obsidian notes with Quartz on GitHub Pages"
+title: Challenge 6a - Meownitoring
 draft: true
 tags:
-  - 
+  - tisc24
+  - tisc24-challenge6a
+  - meownitoring
 ---
+# Writeup
+
 ![[Pasted image 20240930055210.png]]
+Well based on the description alone it seems that there are two parts to this CTF and we are to look through tons of logs (based on the provided ZIP file, UGHHHH).
+
+## Getting Flag 1
+
+After unzipping the file, the following information was displayed in notes.md:
+```
+# Workplan
+Setup monitoring and logs analysis process for PALINDROME. 
+Compare products (we have 1 beta testing rights, need to source for others)
+
+## Product 1: Meownitoring (Beta Test)
+`https://d231g4hz442ywp.cloudfront.net`
+
+1. Any sensitive info in logs / monitoring? 
+2. How secure is the setup?
+3. Usefulness of dashboard? Buggy? 
+```
+
+Apprently, the Meownitoring web application is simply an interface to link AWS CloudTrail logs based on an AWS IAM user for a much more presentable dashboard (well it beats the hell out of sieving through tons of JSON data). To configure a user to access its CloudTrail logs, the user has to:
+- Register for a new account (signup is hassle-free, and free at the same time.).
+- Configure the ARN of an AWS IAM user.
+
+After going through the AWS CloudTrail logs, it seems that the user of interest is this particular IAM user (with its ARN):
+```
+arn:aws:iam::637423240666:user/dev
+```
 
 ![[Pasted image 20240930054728.png]]
+
+After loading this ARN value to the Meownitoring website, the app fails. However after close inspection of the HTTP traffic, there is a request to the URI '/download' to retrieve a ZIP file. Copy the URL into your web browser and you should be able to download the ZIP file.
+
+Unzip the ZIP file and you should get a series of other logs (more JSON GZ files, but this time from two different regions: ap-southeast-1, us-east-1. Go through the logs and you'll notice another ARN for another AWS IAM user: arn:aws:iam::637423240666:role/mewonitoring-lambda-test
+Use the app again to find this, and whaddya know, you'll see logs. and also something interesting (debug aws_secret_access_key) is now in the clear.
+using the secret access key and the access key ID of the debug user (AKIAZI2LCYXNH62RXRH7), do a S3 bucket listing of mewonitoring:
+ aws s3 ls s3://meownitoringtmpbucket.s3.ap-southeast-1.amazonaws.com/
+
+
 
 ![[Pasted image 20240930054737.png]]
 
